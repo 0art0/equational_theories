@@ -3,8 +3,7 @@
 -- and
 import equational_theories.FreeMagma
 import Mathlib.Data.Set.Defs
-
-#check Set
+import Aesop
 
 structure MagmaLaw (α : Type) where
   lhs : FreeMagma α
@@ -20,14 +19,8 @@ match t with
 
 infix:66 " ⬝ " => substFreeMagma
 
-#check ((Lf 0) ⬝ (λ i ↦ Lf i))
-
 @[inline, simp]
 def Ctx α := Set (MagmaLaw α)
-
-#print Membership
-
-#print Set.instMembership
 
 -- FIXME: figure out how to remove this.
 instance Ctx.Membership α : Membership (MagmaLaw α) (Ctx α) := ⟨ Set.instMembership.mem ⟩
@@ -49,13 +42,24 @@ inductive derive {α} : Ctx α → MagmaLaw α → Type :=
 | Subst Γ t u σ : Γ ⊢ (t ≃ u) → Γ ⊢ (t ⬝ σ ≃ u ⬝ σ)
 | Cong Γ t₁ t₂ u₁ u₂ : Γ ⊢ (t₁ ≃ t₂) → Γ ⊢ (u₁ ≃ u₂) → Γ ⊢ (t₁ ⋆ u₁ ≃ t₂ ⋆ u₂)
 
+attribute [aesop safe forward] derive.Ax derive.Ref derive.Trans derive.Sym
+attribute [aesop safe apply] derive.Ref derive.Subst derive.Cong
+attribute [aesop unsafe apply] derive.Ax derive.Sym derive.Trans
+
+@[aesop safe forward (immediate := [h])]
+def derive.Ax' {α} {Γ : Ctx α} {x y : FreeMagma α} (h : x ≃ y ∈ Γ) : derive Γ (x ≃ y) := by
+  apply derive.Ax; exact h
+
 end DeriveDef
 
+@[aesop safe unfold]
 def satisfiesPhi {α G : Type} [Magma G] (φ : α → G) (E : MagmaLaw α) : Prop :=
   evalInMagma φ E.lhs = evalInMagma φ E.rhs
 
+@[aesop safe unfold]
 def satisfies {α : Type} (G : Type) [Magma G] (E : MagmaLaw α) := ∀ (φ : α → G), satisfiesPhi φ E
 
+@[aesop safe unfold]
 def satisfiesSet {α : Type} (G : Type) [Magma G] (Γ : Set (MagmaLaw α)) : Prop :=
   ∀ E ∈ Γ, satisfies G E
 
@@ -71,45 +75,18 @@ infix:50 " ⊧ " => (models)
 
 infix:50 " ⊢ " => (derive)
 
+@[aesop norm simp]
 theorem SubstEval {α} G [Magma G] (t : FreeMagma α) (σ : α → FreeMagma α) (φ : α → G) :
   evalInMagma φ (t ⬝ σ) = evalInMagma (evalInMagma φ ∘ σ) t :=
 by
-  cases t
-  case Leaf => simp [evalInMagma, substFreeMagma]
+  induction t
+  case Leaf => aesop
   case Fork t₁ t₂ =>
-  simp [evalInMagma, substFreeMagma]
-  repeat rw [SubstEval]
+    simp_all [evalInMagma, substFreeMagma]
 
 theorem Soundness {α} (Γ : Ctx α) E (h : Γ ⊢ E) : Γ ⊧ E :=
 by
-  intros G _
-  cases h
-  case Ax mem => intros mset; apply mset; trivial
-  case Ref => intros; intro; simp[satisfiesPhi]
-  -- FIXME: try aesop here, might be a 1-liner
-  case Sym t u prf =>
-    intros φ mset
-    have h := Soundness _ _ prf
-    simp [models, satisfiesPhi] at *
-    symm; apply h; trivial
-  case Trans _ _ _ prf₁ prf₂ =>
-    intros φ mset
-    have h₁ := Soundness _ _ prf₁
-    have h₂ := Soundness _ _ prf₂
-    simp [models, satisfiesPhi] at *
-    rw [h₁, h₂] <;> trivial
-  case Subst t u σ prf =>
-    intros φ mset
-    have h := Soundness _ _ prf
-    simp [models, satisfiesPhi, evalInMagma] at *
-    repeat rw [SubstEval]
-    rw [h]; trivial
-  case Cong _ _ _ prf₁ prf₂ =>
-    intros _ _
-    have h₁ := Soundness _ _ prf₁
-    have h₂ := Soundness _ _ prf₂
-    simp [models, satisfiesPhi, evalInMagma] at *
-    rw [h₁, h₂] <;> trivial
+  intros G _; induction h <;> aesop
 
 -- A little trickery here: since we'd rather have the derivations in Type
 -- (we want to extract the "used" axioms, e.g.) we smush the derivation
@@ -117,15 +94,21 @@ by
 def RelOfLaws {α} (Γ : Ctx α) : FreeMagma α → FreeMagma α → Prop :=
   λ t u ↦ Nonempty (Γ ⊢ t ≃ u)
 
+
+#exit -- TODO: Fix broken code below
+
+attribute [-simp] fork_eq_FreeMagma_op
 -- eazy peezy since we basically have exactly the axioms.
 theorem RelOfLaws.isEquivalence {α} (Γ : Ctx α) : Equivalence (RelOfLaws Γ) :=
 by
   constructor <;> simp [RelOfLaws]
   case refl =>
     intros x; constructor; apply derive.Ref
-  case symm => intros x y h; cases h; constructor; apply derive.Sym; trivial
+  case symm =>
+    intro _ _ h; constructor
+    cases h <;> aesop
   case trans =>
-    intros x y z h₁ h₂; cases h₁; cases h₂; constructor; apply derive.Trans <;> trivial
+    intros x y z h₁ h₂; constructor; cases h₁; cases h₂ <;> aesop
 
 instance SetoidOfLaws {α} (Γ : Ctx α): Setoid (FreeMagma α) :=
   ⟨ RelOfLaws Γ, RelOfLaws.isEquivalence Γ ⟩
@@ -144,7 +127,7 @@ Quotient.lift₂ (λ x y ↦ embed Γ (x ⋆ y))
     simp [HasEquiv.Equiv, Setoid.r, RelOfLaws]
     intros x z y w d₁ d₂; cases d₁; cases d₂
     apply Quotient.sound; simp [HasEquiv.Equiv, Setoid.r, RelOfLaws]; constructor
-    apply derive.Cong <;> trivial
+    apply derive.Cong <;> aesop
 )
 
 instance FreeMagmaWithLaws.Magma {α} (Γ : Ctx α) : Magma (FreeMagmaWithLaws Γ) := { op := ForkWithLaws Γ }
@@ -152,10 +135,10 @@ instance FreeMagmaWithLaws.Magma {α} (Γ : Ctx α) : Magma (FreeMagmaWithLaws �
 theorem FreeMagmaWithLaws.evalInMagmaIsQuot {α} (Γ : Ctx α) (t : FreeMagma α) (σ : α → FreeMagma α):
   evalInMagma (embed Γ ∘ σ) t = embed Γ (t ⬝ σ) :=
 by
-  cases t <;> simp [evalInMagma]
+  induction t <;> simp [evalInMagma]
   case Leaf => trivial
   case Fork =>
-  simp [Magma.op, ForkWithLaws]
+  simp [Magma.op, ForkWithLaws, FreeMagma_op_eq_fork]
   repeat rw [FreeMagmaWithLaws.evalInMagmaIsQuot]
   simp [Quotient.lift₂, Quotient.mk, Quotient.lift]
   apply Quot.sound; simp [Setoid.r, RelOfLaws, substFreeMagma]
@@ -163,8 +146,8 @@ by
 
 theorem substLFId {α} (t : FreeMagma α) : t ⬝ Lf = t :=
 by
-  cases t <;> simp [substFreeMagma]; trivial
-  constructor <;> apply substLFId
+  induction t <;> simp [substFreeMagma]; aesop
+
 
 @[simp]
 def LfEmbed {α} (Γ : Ctx α) : α → FreeMagmaWithLaws Γ := embed Γ ∘ Lf

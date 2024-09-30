@@ -1,5 +1,6 @@
 import equational_theories.Conjecture
 import equational_theories.AllEquations
+import equational_theories.MagmaHom
 
 universe u
 universe v
@@ -7,28 +8,44 @@ universe v
 inductive FreeMagma (α : Type u)
   | Leaf : α → FreeMagma α
   | Fork : FreeMagma α → FreeMagma α → FreeMagma α
-deriving DecidableEq
+  deriving DecidableEq
 
 instance (α : Type u) : Magma (FreeMagma α) where
   op := FreeMagma.Fork
 
 infixl:65 " ⋆ " => FreeMagma.Fork
 
-@[simp]
 theorem FreeMagma_op_eq_fork (α : Type u) (a b : FreeMagma α) : a ∘ b = a ⋆ b := rfl
 
-@[match_pattern]
-def Lf {α : Type u} : (α → FreeMagma α) := FreeMagma.Leaf
+@[simp]
+theorem fork_eq_FreeMagma_op (α : Type u) (a b : FreeMagma α) : a ⋆ b = a ∘ b := rfl
+
+notation "Lf" => FreeMagma.Leaf
 
 instance FreeMagma.Magma {α} : Magma (FreeMagma α) := ⟨ Fork ⟩
 
-def fmapFreeMagma {α : Type u} {β : Type v} (f : α → β) : FreeMagma α → FreeMagma β
+def fmapFreeMagma.fun {α : Type u} {β : Type v} (f : α → β) : FreeMagma α → FreeMagma β
   | Lf a => FreeMagma.Leaf (f a)
-  | lchild ⋆ rchild => FreeMagma.Fork (fmapFreeMagma f lchild) (fmapFreeMagma f rchild)
+  | lchild ⋆ rchild => FreeMagma.Fork (fmapFreeMagma.fun f lchild) (fmapFreeMagma.fun f rchild)
 
-def evalInMagma {α : Type u} {G : Type v} [Magma G] (f : α -> G) : FreeMagma α → G
+def evalInMagma.fun {α : Type u} {G : Type v} [Magma G] (f : α → G) : FreeMagma α → G
   | Lf a => f a
-  | lchild ⋆ rchild => (evalInMagma f lchild) ∘ (evalInMagma f rchild)
+  | lchild ⋆ rchild => (evalInMagma.fun f lchild) ∘ (evalInMagma.fun f rchild)
+
+def evalInMagma {α : Type u} {G : Type v} [Magma G] (f : α → G) : FreeMagma α →∘ G := {
+  toFun := evalInMagma.fun f,
+  map_op' := by
+    intro a b
+    cases a <;> cases b <;> rfl
+}
+
+theorem evalHom {α : Type u} {G G' : Type _} [Magma G] [Magma G'] (f : α → G) (φ : G →∘ G') (t : FreeMagma α) :
+  evalInMagma (φ ∘ f) t = φ (evalInMagma f t) := by
+  induction t
+  . rfl
+  · rw [← FreeMagma_op_eq_fork]
+    repeat (rw [MagmaHom.map_op])
+    simp_all only
 
 theorem ExpressionEqualsAnything_implies_Equation2 (G: Type u) [Magma G]
   : (∃ n : Nat, ∃ expr : FreeMagma (Fin n), ∀ x : G, ∀ sub : Fin n → G, x = evalInMagma sub expr) → Equation2 G := by
