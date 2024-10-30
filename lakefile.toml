@@ -19,6 +19,11 @@ name = "«doc-gen4»"
 git = "https://github.com/leanprover/doc-gen4"
 rev = "main"
 
+[[require]]
+name = "verso"
+git = "https://github.com/leanprover/verso.git"
+rev = "main"
+
 [[lean_lib]]
 name = "equational_theories"
 
@@ -35,4 +40,10 @@ supportInterpreter = true
 [[lean_exe]]
 name = "generate_lifting_magma_family_counterexamples"
 root = "equational_theories.LiftingMagmaFamiliesCounterexamples"
+supportInterpreter = true
+
+[[lean_exe]]
+name = "presentation"
+srcDir = "equational_theories/Presentation"
+root = "PresentationMain"
 supportInterpreter = true
