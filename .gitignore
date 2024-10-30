@@ -50,3 +50,5 @@ widget/node_modules/*
 .idea
 equational_theories/Generated/All4x4Tables/src/finite_magma_tools/bin
 equational_theories/Generated/All4x4Tables/src/finite_magma_tools/dist-newstyle
+# Verso site
+_site/*
