@@ -1,1 +1,2 @@
 import equational_theories.Presentation.MetatheoremProofs.Overview
+import equational_theories.Presentation.MetatheoremProofs.EquationsAndLaws

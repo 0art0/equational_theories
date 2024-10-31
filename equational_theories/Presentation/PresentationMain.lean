@@ -60,6 +60,7 @@ def theme : Theme := { Theme.default with
 def demoSite : Site := site equational_theories.Presentation.MetatheoremProofs.Overview /
   static "static" ← "equational_theories/Presentation/static_files"
   "Introduction" equational_theories.Presentation.MetatheoremProofs.Overview
+  "Equations and Laws" equational_theories.Presentation.MetatheoremProofs.EquationsAndLaws
 
 
 
