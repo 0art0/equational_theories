@@ -59,8 +59,10 @@ def theme : Theme := { Theme.default with
 
 def demoSite : Site := site equational_theories.Presentation.MetatheoremProofs.Overview /
   static "static" ← "equational_theories/Presentation/static_files"
-  "Introduction" equational_theories.Presentation.MetatheoremProofs.Overview
+  "Overview" equational_theories.Presentation.MetatheoremProofs.Overview
+  "Metatheorems" equational_theories.Presentation.MetatheoremProofs.Metatheorems
   "Equations and Laws" equational_theories.Presentation.MetatheoremProofs.EquationsAndLaws
+  "Lifting Magma Families" equational_theories.Presentation.MetatheoremProofs.LiftingMagmaFamilies
 
 
 

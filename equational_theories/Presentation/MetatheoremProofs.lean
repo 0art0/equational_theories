@@ -1,2 +1,4 @@
 import equational_theories.Presentation.MetatheoremProofs.Overview
 import equational_theories.Presentation.MetatheoremProofs.EquationsAndLaws
+import equational_theories.Presentation.MetatheoremProofs.Metatheorems
+import equational_theories.Presentation.MetatheoremProofs.LiftingMagmaFamilies
